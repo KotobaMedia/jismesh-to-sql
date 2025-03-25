@@ -779,9 +779,9 @@ dependencies = [
 
 [[package]]
 name = "km-to-sql"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6586e0ed82d050e76e4cf3708692b84e813f36dbb32611ad9c9748bd5f17c01b"
+checksum = "bc79fcfe445d24690aae31f84d9666cec80f929d7359a4cb0a5a7433330bca8a"
 dependencies = [
  "serde",
  "serde_json",

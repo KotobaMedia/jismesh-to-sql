@@ -14,7 +14,7 @@ futures-util = "0.3.31"
 geo-types = "0.6"
 indicatif = { version = "0.17.11", features = ["tokio"] }
 jismesh = "0.1.2"
-km-to-sql = "0.1.0"
+km-to-sql = "0.1.1"
 ndarray = "0.16.1"
 num_cpus = "1"
 # jismesh = { path = "../jismesh-rs" }

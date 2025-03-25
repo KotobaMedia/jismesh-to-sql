@@ -36,3 +36,44 @@ CREATE TABLE "public"."jismesh_codes" (
 CREATE INDEX jismesh_codes_code_idx ON public.jismesh_codes USING btree (code, level);
 CREATE INDEX jismesh_codes_geom_idx ON public.jismesh_codes USING gist (geom);
 ```
+
+## メタデータ
+
+このツールは `datasets` テーブルにメタ情報を追加します。
+
+```jsonc
+{
+    "desc": "JIS X 0410 地域メッシュコードとgeometryを双方にマッピングするためのテーブル",
+    "name": "メッシュコード位置参照",
+    "primary_key": "code",
+    "columns": [
+        {
+            "desc": "地域メッシュコード",
+            "name": "code",
+            "data_type": "bigint",
+        },
+        {
+            "desc": "メッシュ区画 (1次、2次など)",
+            "name": "level",
+            "data_type": "integer",
+            "enum_values": [
+                {
+                    "desc": "1次 (80km四方)",
+                    "value": "1"
+                },
+                {
+                    "desc": "2次 (10km四方)",
+                    "value": "2"
+                },
+                // ...
+            ]
+        },
+        {
+            "desc": "地域メッシュを表すポリゴン",
+            "name": "geom",
+            "data_type": "geometry(polygon, 4326)"
+        }
+    ],
+    "source_url": "https://www.stat.go.jp/data/mesh/pdf/gaiyo1.pdf"
+}
+```
