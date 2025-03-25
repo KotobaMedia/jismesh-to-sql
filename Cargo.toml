@@ -13,7 +13,8 @@ derive_builder = "0.20.2"
 futures-util = "0.3.31"
 geo-types = "0.6"
 indicatif = { version = "0.17.11", features = ["tokio"] }
-jismesh = "0.1.1"
+jismesh = "0.1.2"
+km-to-sql = "0.1.0"
 ndarray = "0.16.1"
 num_cpus = "1"
 # jismesh = { path = "../jismesh-rs" }
@@ -22,3 +23,4 @@ serde_json = "1"
 strum = "0.27.1"
 tokio = { version = "1.44.1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-geo-types-0_6", "with-serde_json-1"] }
+url = "2.5.4"

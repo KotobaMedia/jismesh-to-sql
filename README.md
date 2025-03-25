@@ -32,7 +32,6 @@ CREATE TABLE "public"."jismesh_codes" (
     PRIMARY KEY ("code")
 );
 
-
 -- Indices
 CREATE INDEX jismesh_codes_code_idx ON public.jismesh_codes USING btree (code, level);
 CREATE INDEX jismesh_codes_geom_idx ON public.jismesh_codes USING gist (geom);

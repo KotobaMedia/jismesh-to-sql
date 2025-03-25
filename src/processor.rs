@@ -1,13 +1,13 @@
-use std::time::Duration;
-
 use anyhow::{Context, Result};
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime};
 use derive_builder::Builder;
 use futures_util::TryFutureExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use ndarray::{Array1, Axis};
+use std::time::Duration;
 use tokio::task::JoinSet;
 use tokio_postgres::NoTls;
+use url::Url;
 
 use crate::schema;
 
@@ -119,6 +119,14 @@ pub struct Processor {
 
 impl Processor {
     pub async fn process(&mut self) -> Result<()> {
+        self.process_data().await?;
+        if !self.skip_metadata {
+            self.process_metadata().await?;
+        }
+        Ok(())
+    }
+
+    async fn process_data(&mut self) -> Result<()> {
         // given root meshes and levels, we'll generate polygons for each mesh
         // and insert them in to the database.
         // Generating polygons is done by jismesh crate, and is blocking, so we'll
@@ -169,6 +177,84 @@ impl Processor {
         generator_result.with_context(|| "when generating mesh codes")?;
 
         println!("All mesh codes generated and inserted.");
+        Ok(())
+    }
+
+    async fn query_levels_from_db(&self) -> Result<Vec<jismesh::MeshLevel>> {
+        let client = self.pool.get().await?;
+        let stmt = client
+            .prepare("SELECT DISTINCT level FROM jismesh_codes")
+            .await?;
+        let rows = client.query(&stmt, &[]).await?;
+        let mut levels = Vec::new();
+        for row in rows {
+            let level: i32 = row.get(0);
+            levels.push(jismesh::MeshLevel::try_from(level as usize)?);
+        }
+        Ok(levels)
+    }
+
+    async fn process_metadata(&mut self) -> Result<()> {
+        use km_to_sql::{
+            metadata::{ColumnEnumDetails, ColumnMetadata, TableMetadata},
+            postgres::{init_schema, upsert},
+        };
+
+        let enum_values: Vec<ColumnEnumDetails> = self
+            .query_levels_from_db()
+            .await?
+            .iter()
+            .map(|l| ColumnEnumDetails {
+                value: (*l as usize).to_string(),
+                desc: Some(format!("{} ({})", l.to_string_jp(), l.to_size_jp())),
+            })
+            .collect();
+
+        let d = TableMetadata {
+            name: "メッシュコード位置参照".into(),
+            desc: Some(
+                "JIS X 0410 地域メッシュコードとgeometryを双方にマッピングするためのテーブル"
+                    .into(),
+            ),
+            source: None,
+            source_url: Some(
+                Url::parse("https://www.stat.go.jp/data/mesh/pdf/gaiyo1.pdf").unwrap(),
+            ),
+            license: None,
+            license_url: None,
+            primary_key: Some("code".into()),
+            columns: vec![
+                ColumnMetadata {
+                    name: "code".into(),
+                    desc: Some("地域メッシュコード".into()),
+                    data_type: "bigint".into(),
+                    foreign_key: None,
+                    enum_values: None,
+                },
+                ColumnMetadata {
+                    name: "level".into(),
+                    desc: Some("メッシュ区画 (1次、2次など)".into()),
+                    data_type: "integer".into(),
+                    foreign_key: None,
+                    enum_values: Some(enum_values),
+                },
+                ColumnMetadata {
+                    name: "geom".into(),
+                    desc: Some("地域メッシュを表すポリゴン".into()),
+                    data_type: "geometry(polygon, 4326)".into(),
+                    foreign_key: None,
+                    enum_values: None,
+                },
+            ],
+        };
+        let client = self.pool.get().await?;
+        init_schema(&client)
+            .await
+            .with_context(|| "when initializing metadata schema")?;
+        upsert(&client, TABLE_NAME, &d)
+            .await
+            .with_context(|| "when inserting metadata")?;
+
         Ok(())
     }
 
